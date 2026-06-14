@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Филворд — Конструктор Задания</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div id="philword-target"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/generator.js"></script>
+    <script src="js/creator.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        Philword.init({
+            mode: 'create',
+            containerId: 'philword-target',
+            onConfigGenerated: function (config) {
+                // Транслитерация и формирование имени файла
+                const title = config.title || 'Филворд';
+                const translit = {
+                    'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo',
+                    'ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m',
+                    'н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u',
+                    'ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'sch',
+                    'ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'
+                };
+                const safeName = title.toLowerCase()
+                    .split('').map(c => translit[c] || c).join('')
+                    .replace(/[^a-z0-9]/g, '_')
+                    .replace(/_+/g, '_')
+                    .replace(/^_|_$/g, '') || 'task';
+                const fileName = safeName + '.json';
+
+                // Скачиваем JSON-файл
+                const jsonStr = JSON.stringify(config, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                // Показываем модальное окно с инструкцией
+                _showSavedModal(fileName, title);
+            }
+        });
+
+        function _showSavedModal(fileName, title) {
+            // Удаляем старое окно если есть
+            const old = document.getElementById('saved-modal-overlay');
+            if (old) old.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'saved-modal-overlay';
+            Object.assign(overlay.style, {
+                position: 'fixed', inset: '0',
+                background: 'rgba(0,0,0,0.5)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: '1000', padding: '1rem',
+                animation: 'fadeIn 0.3s ease'
+            });
+
+            const modal = document.createElement('div');
+            modal.className = 'glass-panel';
+            Object.assign(modal.style, {
+                maxWidth: '560px', width: '100%',
+                textAlign: 'center',
+                background: 'var(--surface-color)',
+                position: 'relative'
+            });
+
+            // Пример ссылки для GitHub Pages
+            const exampleLink = `https://&lt;username&gt;.github.io/&lt;repo&gt;/play.html?task=tasks/${fileName}`;
+
+            modal.innerHTML = `
+                <h2 style="color: var(--primary-color); margin-bottom: 0.5rem;">✅ Задание сохранено!</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Файл <b>${fileName}</b> скачан. Положите его в папку <code style="background: var(--cell-bg); padding: 0.15rem 0.4rem; border-radius: 4px;">tasks/</code> вашего репозитория.
+                </p>
+
+                <div style="background: var(--cell-bg); border-radius: var(--border-radius-md); padding: 1rem; text-align: left; margin-bottom: 1.5rem;">
+                    <p style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; font-size: 0.875rem;">📋 Инструкция:</p>
+                    <ol style="font-size: 0.8rem; color: var(--text-secondary); padding-left: 1.25rem; margin: 0; line-height: 1.8;">
+                        <li>Положите <b>${fileName}</b> в папку <code style="background: white; padding: 0.1rem 0.3rem; border-radius: 3px;">tasks/</code></li>
+                        <li>Загрузите проект на GitHub</li>
+                        <li>Ссылка на задание будет:<br>
+                            <code style="background: white; padding: 0.2rem 0.4rem; border-radius: 3px; word-break: break-all; font-size: 0.75rem;">play.html?task=tasks/${fileName}</code>
+                        </li>
+                        <li>Сгенерируйте QR-код на эту ссылку</li>
+                    </ol>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                    <button id="test-local-btn" class="btn btn-secondary">
+                        ▶ Проверить локально
+                    </button>
+                    <button id="close-modal-btn" class="btn" 
+                            style="background: var(--cell-bg); color: var(--text-primary);">
+                        Закрыть
+                    </button>
+                </div>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Закрытие по клику на overlay
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) overlay.remove();
+            });
+
+            // Закрытие по кнопке
+            document.getElementById('close-modal-btn').addEventListener('click', () => overlay.remove());
+
+            // Локальное тестирование — открывает play.html с параметром
+            document.getElementById('test-local-btn').addEventListener('click', () => {
+                const playUrl = new URL('play.html', window.location.href);
+                playUrl.searchParams.set('task', 'tasks/' + fileName);
+                window.open(playUrl.href, '_blank');
+            });
+        }
+    </script>
+</body>
+
+</html>

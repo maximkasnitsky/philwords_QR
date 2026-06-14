@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Филворд — Задание</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div id="philword-target"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/generator.js"></script>
+    <script src="js/creator.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        (function () {
+            const container = document.getElementById('philword-target');
+            container.classList.add('philword-container');
+
+            // Читаем путь к JSON из параметра ?task=
+            const params = new URLSearchParams(window.location.search);
+            const taskPath = params.get('task');
+
+            if (!taskPath) {
+                container.innerHTML = '<div class="glass-panel text-center" style="margin-top: 2rem;"><h2>Задание не найдено</h2><p>Откройте ссылку с заданием или отсканируйте QR-код.</p></div>';
+                return;
+            }
+
+            // Загружаем JSON-файл
+            fetch(taskPath)
+                .then(response => {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.json();
+                })
+                .then(config => {
+                    if (!config || !config.grid || !config.words) {
+                        throw new Error('Invalid config');
+                    }
+
+                    // Обновляем заголовок страницы
+                    if (config.title) {
+                        document.title = config.title + ' — Филворд';
+                    }
+
+                    Philword.init({
+                        mode: 'play',
+                        containerId: 'philword-target',
+                        data: config,
+                        maxHints: 3,
+                        onComplete: function (result) { }
+                    });
+                })
+                .catch(e => {
+                    console.error('Ошибка загрузки задания:', e);
+                    container.innerHTML = '<div class="glass-panel text-center" style="margin-top: 2rem;"><h2>Ошибка загрузки</h2><p>Не удалось загрузить задание. Проверьте, что файл существует по указанному пути.</p></div>';
+                });
+        })();
+    </script>
+</body>
+
+</html>
